@@ -1,0 +1,10 @@
+langgraph
+langchain-groq
+langchain-community
+langchain-huggingface
+chromadb
+pydantic
+duckduckgo-search
+python-dotenv
+sentence-transformers
+streamlit

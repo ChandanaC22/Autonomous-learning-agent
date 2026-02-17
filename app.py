@@ -4,6 +4,7 @@ from agent import app as agent_app
 from models import Checkpoint, MCQ
 from search_utils import search_for_simple_explanation
 from context_utils import generate_feynman_explanation
+from backend.database import SessionLocal, MasterySession, Question, init_db
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -41,6 +42,11 @@ if "remediation_index" not in st.session_state:
     st.session_state.remediation_index = 0
 if "seen_questions" not in st.session_state:
     st.session_state.seen_questions = []
+if "db_session_id" not in st.session_state:
+    st.session_state.db_session_id = None
+
+# Initialize DB
+init_db()
 
 # --- Sidebar ---
 with st.sidebar:
@@ -114,7 +120,27 @@ with st.sidebar:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
-    
+
+    st.divider()
+    st.markdown("### 📜 Session History")
+    with SessionLocal() as db:
+        history = db.query(MasterySession).order_by(MasterySession.created_at.desc()).limit(10).all()
+        if history:
+                with st.expander(f"{h.topic} - {h.score:.0f}%"):
+                    # Handle potential naive/aware timestamps
+                    created_at = h.created_at
+                    if created_at.tzinfo is None:
+                        import datetime
+                        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+                    st.caption(f"Date: {created_at.strftime('%Y-%m-%d %H:%M')}")
+                    st.write(f"Relevance: {h.relevance_score:.1f}%")
+                    if st.button(f"View {h.id}", key=f"view_hist_{h.id}"):
+                        # Logic to reload past session could be complex, 
+                        # for now just show a message or redirect
+                        st.info("Directly reloading past sessions coming soon!")
+        else:
+            st.caption("No history yet.")
+
     with st.expander("💡 Learning Tips"):
         st.markdown("""
         - **Navigation**: Click any unlocked step above to revisit material.
@@ -142,6 +168,36 @@ CHECKPOINTS = {
         "icon": "⚡",
         "desc": "Deep dive into Neural Networks and Computer Vision.",
         "objectives": ["Neural Architectures", "Backpropagation", "CNNs & Vision"]
+    },
+    "Data Structures": {
+        "icon": "📊",
+        "desc": "Master fundamental data structures and their applications.",
+        "objectives": ["Arrays & Lists", "Trees & Graphs", "Hash Tables & Sets"]
+    },
+    "Algorithms": {
+        "icon": "🔍",
+        "desc": "Learn algorithmic thinking and problem-solving techniques.",
+        "objectives": ["Sorting & Searching", "Dynamic Programming", "Graph Algorithms"]
+    },
+    "Web Dev": {
+        "icon": "🌐",
+        "desc": "Build modern web applications from frontend to backend.",
+        "objectives": ["HTML/CSS/JavaScript", "React & Frontend", "Node.js & APIs"]
+    },
+    "Databases": {
+        "icon": "💾",
+        "desc": "Design and optimize relational and NoSQL databases.",
+        "objectives": ["SQL Fundamentals", "Database Design", "Query Optimization"]
+    },
+    "Cloud": {
+        "icon": "☁️",
+        "desc": "Deploy and scale applications in the cloud.",
+        "objectives": ["Cloud Platforms", "Containerization", "Serverless Architecture"]
+    },
+    "Security": {
+        "icon": "🔒",
+        "desc": "Protect systems and data from cyber threats.",
+        "objectives": ["Cryptography", "Network Security", "Secure Coding Practices"]
     }
 }
 
@@ -224,6 +280,32 @@ elif st.session_state.step == "learning":
             state.update(generate_questions_node(state))
             st.write("📝 Practice quiz prepared.")
             
+        # PERSIST TO DB
+        if not st.session_state.db_session_id:
+            with SessionLocal() as db:
+                db_session = MasterySession(
+                    topic=state["checkpoint"].topic,
+                    objectives=state["checkpoint"].objectives,
+                    context=state["checkpoint"].context,
+                    summary=state["summary"],
+                    relevance_score=state.get("relevance_score", 0.0)
+                )
+                db.add(db_session)
+                db.commit()
+                db.refresh(db_session)
+                st.session_state.db_session_id = db_session.id
+                
+                # Save Questions
+                for mcq in state["mcqs"]:
+                    db_question = Question(
+                        session_id=db_session.id,
+                        question=mcq.question,
+                        options=mcq.options,
+                        correct_index=mcq.correct_index
+                    )
+                    db.add(db_question)
+                db.commit()
+
         st.session_state.agent_state = state
         status.update(label="Learning material ready!", state="complete", expanded=False)
     
@@ -281,6 +363,15 @@ elif st.session_state.step == "quiz":
         final_score_pct = (correct_count / total_mcqs) * 100
         st.session_state.score = correct_count
         st.session_state.agent_state["score"] = final_score_pct
+        
+        # UPDATE SCORE IN DB
+        if st.session_state.db_session_id:
+            with SessionLocal() as db:
+                db_session = db.query(MasterySession).filter(MasterySession.id == st.session_state.db_session_id).first()
+                if db_session:
+                    db_session.score = final_score_pct
+                    db_session.missed_indices = st.session_state.missed_indices
+                    db.commit()
         
         if st.session_state.missed_indices:
             st.session_state.step = "remediation"

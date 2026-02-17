@@ -1,5 +1,6 @@
 import sys
 import os
+import datetime
 from typing import List, Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -181,6 +182,7 @@ def submit_quiz(req: AnswerRequest, session_id: Optional[int] = None, db: Sessio
             
     score_pct = (correct_count / len(mcqs)) * 100
     db_session.score = score_pct
+    db_session.missed_indices = missed_indices
     db.commit()
     
     return {
@@ -229,6 +231,37 @@ def reset_state(db: Session = Depends(get_db)):
     db.query(MasterySession).delete()
     db.commit()
     return {"message": "All database state cleared"}
+    
+@app.get("/history")
+def get_history(db: Session = Depends(get_db)):
+    sessions = db.query(MasterySession).order_by(MasterySession.created_at.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "topic": s.topic,
+            "score": s.score,
+            "relevance_score": s.relevance_score,
+            "created_at": s.created_at.replace(tzinfo=datetime.timezone.utc) if s.created_at.tzinfo is None else s.created_at
+        } for s in sessions
+    ]
+
+@app.get("/sessions/{session_id}")
+def get_session_details(session_id: int, db: Session = Depends(get_db)):
+    db_session = db.query(MasterySession).filter(MasterySession.id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    return {
+        "id": db_session.id,
+        "topic": db_session.topic,
+        "objectives": db_session.objectives,
+        "summary": db_session.summary,
+        "score": db_session.score,
+        "relevance_score": db_session.relevance_score,
+        "created_at": db_session.created_at.replace(tzinfo=datetime.timezone.utc) if db_session.created_at.tzinfo is None else db_session.created_at,
+        "mcqs": [{"question": q.question, "options": q.options, "correct_index": q.correct_index} for q in db_session.mcqs],
+        "missed_indices": db_session.missed_indices
+    }
 
 if __name__ == "__main__":
     import uvicorn

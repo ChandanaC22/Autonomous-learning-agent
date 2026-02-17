@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Cpu, BrainCircuit, Code, ArrowRight } from 'lucide-react';
+import { Layers, Cpu, BrainCircuit, Code, ArrowRight, Database, Globe, Shield, Search, Cloud } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const TOPICS = [
@@ -34,6 +34,54 @@ const TOPICS = [
         desc: 'Deep dive into Neural Networks and Computer Vision.',
         objectives: ["Neural Architectures", "Backpropagation", "CNNs & Vision"],
         color: "from-orange-500 to-amber-400"
+    },
+    {
+        id: 'Data Structures',
+        label: 'Data Structures',
+        icon: Database,
+        desc: 'Master fundamental data structures and their applications.',
+        objectives: ["Arrays & Lists", "Trees & Graphs", "Hash Tables & Sets"],
+        color: "from-pink-500 to-rose-400"
+    },
+    {
+        id: 'Algorithms',
+        label: 'Algorithms',
+        icon: Search,
+        desc: 'Learn algorithmic thinking and problem-solving techniques.',
+        objectives: ["Sorting & Searching", "Dynamic Programming", "Graph Algorithms"],
+        color: "from-violet-500 to-purple-400"
+    },
+    {
+        id: 'Web Dev',
+        label: 'Web Development',
+        icon: Globe,
+        desc: 'Build modern web applications from frontend to backend.',
+        objectives: ["HTML/CSS/JavaScript", "React & Frontend", "Node.js & APIs"],
+        color: "from-sky-500 to-blue-400"
+    },
+    {
+        id: 'Databases',
+        label: 'Database Design',
+        icon: Database,
+        desc: 'Design and optimize relational and NoSQL databases.',
+        objectives: ["SQL Fundamentals", "Database Design", "Query Optimization"],
+        color: "from-cyan-500 to-teal-400"
+    },
+    {
+        id: 'Cloud',
+        label: 'Cloud Computing',
+        icon: Cloud,
+        desc: 'Deploy and scale applications in the cloud.',
+        objectives: ["Cloud Platforms", "Containerization", "Serverless Architecture"],
+        color: "from-indigo-500 to-blue-400"
+    },
+    {
+        id: 'Security',
+        label: 'Cybersecurity',
+        icon: Shield,
+        desc: 'Protect systems and data from cyber threats.',
+        objectives: ["Cryptography", "Network Security", "Secure Coding Practices"],
+        color: "from-red-500 to-orange-400"
     }
 ];
 
@@ -62,8 +110,8 @@ function TopicSelection({ onStart }) {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             className={`cursor-pointer p-6 rounded-2xl border-2 transition-all relative overflow-hidden group ${isSelected
-                                    ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100'
-                                    : 'border-white bg-white/60 hover:border-indigo-200'
+                                ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100'
+                                : 'border-white bg-white/60 hover:border-indigo-200'
                                 }`}
                         >
                             <div className={`absolute top-0 right-0 p-32 opacity-5 rounded-full blur-3xl bg-gradient-to-br ${topic.color} translate-x-10 -translate-y-10 group-hover:opacity-10 transition-opacity`}></div>

@@ -10,9 +10,10 @@ import LearningView from './components/LearningView';
 import QuizView from './components/QuizView';
 import RemediationView from './components/RemediationView';
 import ResultsView from './components/ResultsView';
+import HistoryView from './components/HistoryView';
 
 function App() {
-  const [step, setStep] = useState('input'); // input, learning, quiz, remediation, complete
+  const [step, setStep] = useState('input'); // input, learning, quiz, remediation, complete, history
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [state, setState] = useState({
@@ -136,12 +137,20 @@ function App() {
           })}
         </nav>
 
-        <button
-          onClick={handleReset}
-          className="mt-auto flex items-center gap-2 text-slate-400 hover:text-rose-500 transition-colors p-2 text-sm font-medium"
-        >
-          <span>Restart Journey</span>
-        </button>
+        <div className="mt-auto space-y-2">
+          <button
+            onClick={() => setStep('history')}
+            className="w-full flex items-center gap-2 text-slate-600 hover:text-indigo-600 transition-colors p-3 text-sm font-bold rounded-xl hover:bg-indigo-50"
+          >
+            <span>📜 View History</span>
+          </button>
+          <button
+            onClick={handleReset}
+            className="w-full flex items-center gap-2 text-slate-400 hover:text-rose-500 transition-colors p-2 text-sm font-medium"
+          >
+            <span>Restart Journey</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -205,6 +214,9 @@ function App() {
                     onReset={handleReset}
                     onReview={handleReview}
                   />
+                )}
+                {step === 'history' && (
+                  <HistoryView onClose={() => setStep('input')} />
                 )}
               </motion.div>
             )}

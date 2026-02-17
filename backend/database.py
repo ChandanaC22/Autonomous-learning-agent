@@ -39,8 +39,9 @@ class MasterySession(Base):
     summary = Column(Text, nullable=True)
     relevance_score = Column(Float, default=0.0)
     score = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    missed_indices = Column(JSON, nullable=True)  # List of indices of missed MCQs
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     mcqs = relationship("Question", back_populates="session", cascade="all, delete-orphan")
 

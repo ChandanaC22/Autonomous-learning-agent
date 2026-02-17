@@ -16,9 +16,9 @@ services:
         sync: false # Set manually in Render dashboard
 
   # Frontend Static Site
-  - type: static
+  - type: static_site
     name: autolearner-frontend
-    env: static
+    env: static_site
     region: oregon
     plan: free
     buildCommand: cd frontend && npm install && npm run build

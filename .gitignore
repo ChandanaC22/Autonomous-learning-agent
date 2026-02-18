@@ -1,6 +1,25 @@
-.env
-autolearner.db
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+autolearner.db
+.env
+
+# Frontend (React/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr
+frontend/*.local
+
+# IDEs and Editors
 .vscode/
 .idea/
-*.pyc
+*.swp
+*.swo
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

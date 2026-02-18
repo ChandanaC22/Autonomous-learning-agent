@@ -1,1 +1,6 @@
 .env
+autolearner.db
+__pycache__/
+.vscode/
+.idea/
+*.pyc

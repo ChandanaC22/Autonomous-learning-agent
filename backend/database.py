@@ -29,6 +29,16 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+
+    sessions = relationship("MasterySession", back_populates="user")
+
 class MasterySession(Base):
     __tablename__ = "mastery_sessions"
 
@@ -43,6 +53,9 @@ class MasterySession(Base):
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
 
+    user_id = Column(Integer, ForeignKey("users.id"))
+    
+    user = relationship("User", back_populates="sessions")
     mcqs = relationship("Question", back_populates="session", cascade="all, delete-orphan")
 
 class Question(Base):

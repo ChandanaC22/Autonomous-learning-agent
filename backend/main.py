@@ -21,9 +21,11 @@ try:
     from models import AgentState, Checkpoint, MCQ
     from search_utils import search_for_simple_explanation
     from context_utils import generate_feynman_explanation
-    from backend.database import init_db, get_db, MasterySession, Question
+    from backend.database import init_db, get_db, MasterySession, Question, User
     from sqlalchemy.orm import Session
-    from fastapi import Depends
+    from fastapi import Depends, Security
+    from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+    from backend.auth_utils import create_access_token, get_password_hash, verify_password, decode_access_token
 except ImportError as e:
     print(f"❌ Error importing modules: {e}")
     print(f"Current sys.path: {sys.path}")
@@ -53,14 +55,75 @@ class InitRequest(BaseModel):
 class AnswerRequest(BaseModel):
     user_answers: List[int] # Indices of selected options
 
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+# --- Authentication ---
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
 # --- In-Memory State Management (REPLACED BY POSTGRES) ---
 
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Autonomous Learning Agent API is running"}
 
+@app.post("/register", response_model=UserResponse)
+def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # Check if username or email already exists
+    existing_user = db.query(User).filter((User.username == user_data.username) | (User.email == user_data.email)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username or email already registered")
+    
+    hashed_p = get_password_hash(user_data.password)
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        hashed_password=hashed_p
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.post("/login", response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @app.post("/start")
-def start_learning(req: InitRequest, db: Session = Depends(get_db)):
+def start_learning(req: InitRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     initial_checkpoint = Checkpoint(
         topic=req.topic,
         objectives=req.objectives,
@@ -101,7 +164,8 @@ def start_learning(req: InitRequest, db: Session = Depends(get_db)):
         objectives=req.objectives,
         context=state["checkpoint"].context,
         summary=state["summary"],
-        relevance_score=state["relevance_score"]
+        relevance_score=state["relevance_score"],
+        user_id=current_user.id
     )
     db.add(db_session)
     db.commit()
@@ -115,11 +179,11 @@ def start_learning(req: InitRequest, db: Session = Depends(get_db)):
     }
 
 @app.get("/quiz")
-def get_quiz(session_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_quiz(session_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if session_id:
-        db_session = db.query(MasterySession).filter(MasterySession.id == session_id).first()
+        db_session = db.query(MasterySession).filter(MasterySession.id == session_id, MasterySession.user_id == current_user.id).first()
     else:
-        db_session = db.query(MasterySession).order_by(MasterySession.created_at.desc()).first()
+        db_session = db.query(MasterySession).filter(MasterySession.user_id == current_user.id).order_by(MasterySession.created_at.desc()).first()
         
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -158,11 +222,11 @@ def get_quiz(session_id: Optional[int] = None, db: Session = Depends(get_db)):
     }
 
 @app.post("/submit")
-def submit_quiz(req: AnswerRequest, session_id: Optional[int] = None, db: Session = Depends(get_db)):
+def submit_quiz(req: AnswerRequest, session_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if session_id:
-        db_session = db.query(MasterySession).filter(MasterySession.id == session_id).first()
+        db_session = db.query(MasterySession).filter(MasterySession.id == session_id, MasterySession.user_id == current_user.id).first()
     else:
-        db_session = db.query(MasterySession).order_by(MasterySession.created_at.desc()).first()
+        db_session = db.query(MasterySession).filter(MasterySession.user_id == current_user.id).order_by(MasterySession.created_at.desc()).first()
         
     if not db_session or not db_session.mcqs:
         raise HTTPException(status_code=400, detail="Session or quiz not available")
@@ -193,11 +257,11 @@ def submit_quiz(req: AnswerRequest, session_id: Optional[int] = None, db: Sessio
     }
 
 @app.get("/remediation")
-def get_remediation(session_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_remediation(session_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if session_id:
-        db_session = db.query(MasterySession).filter(MasterySession.id == session_id).first()
+        db_session = db.query(MasterySession).filter(MasterySession.id == session_id, MasterySession.user_id == current_user.id).first()
     else:
-        db_session = db.query(MasterySession).order_by(MasterySession.created_at.desc()).first()
+        db_session = db.query(MasterySession).filter(MasterySession.user_id == current_user.id).order_by(MasterySession.created_at.desc()).first()
         
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -225,16 +289,20 @@ def get_remediation(session_id: Optional[int] = None, db: Session = Depends(get_
     return {"session_id": db_session.id, "remediation": explanations}
 
 @app.post("/reset")
-def reset_state(db: Session = Depends(get_db)):
-    # Delete all sessions for demo reset
-    db.query(Question).delete()
-    db.query(MasterySession).delete()
+def reset_state(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Delete sessions for the current user
+    sessions = db.query(MasterySession).filter(MasterySession.user_id == current_user.id).all()
+    for session in sessions:
+        db.query(Question).filter(Question.session_id == session.id).delete()
+    db.query(MasterySession).filter(MasterySession.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Database state cleared for user"}
     db.commit()
     return {"message": "All database state cleared"}
     
 @app.get("/history")
-def get_history(db: Session = Depends(get_db)):
-    sessions = db.query(MasterySession).order_by(MasterySession.created_at.desc()).all()
+def get_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    sessions = db.query(MasterySession).filter(MasterySession.user_id == current_user.id).order_by(MasterySession.created_at.desc()).all()
     return [
         {
             "id": s.id,
@@ -246,8 +314,8 @@ def get_history(db: Session = Depends(get_db)):
     ]
 
 @app.get("/sessions/{session_id}")
-def get_session_details(session_id: int, db: Session = Depends(get_db)):
-    db_session = db.query(MasterySession).filter(MasterySession.id == session_id).first()
+def get_session_details(session_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_session = db.query(MasterySession).filter(MasterySession.id == session_id, MasterySession.user_id == current_user.id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
         

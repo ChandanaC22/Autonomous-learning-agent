@@ -8,23 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Fallback to local SQLite if Postgres is not available or specified
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL or "postgresql" not in DATABASE_URL:
-    print("⚠️  PostgreSQL URL not found or invalid. Falling back to local SQLite (autolearner.db).")
-    DATABASE_URL = "sqlite:///./autolearner.db"
-    # SQLite needs special argument for multi-threading in some cases
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    try:
-        engine = create_engine(DATABASE_URL)
-        # Try to connect once to verify
-        with engine.connect() as conn:
-            pass
-    except Exception as e:
-        print(f"⚠️  PostgreSQL connection failed: {e}. Falling back to SQLite.")
-        DATABASE_URL = "sqlite:///./autolearner.db"
-        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Local SQLite database configuration
+DATABASE_URL = "sqlite:///./autolearner.db"
+# SQLite needs special argument for multi-threading in some cases
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

@@ -11,9 +11,6 @@ streamlit
 fastapi
 uvicorn
 sqlalchemy
-psycopg2-binary
-psycopg[binary,pool]
-langgraph-checkpoint-postgres
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart

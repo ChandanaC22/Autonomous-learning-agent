@@ -1,0 +1,18 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: autolearner-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # Set manually in Render dashboard
+      - key: SECRET_KEY
+        sync: false # Set manually in Render dashboard
+
+databases:
+  - name: autolearner-db
+    plan: free

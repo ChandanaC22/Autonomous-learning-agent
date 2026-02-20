@@ -5,8 +5,7 @@ from models import AgentState, Checkpoint, MCQ
 from search_utils import gather_context_from_web, gather_context_from_notes, validate_relevance
 from context_utils import chunk_text, setup_vector_store, generate_summary, generate_mcqs, evaluate_answer
 from dotenv import load_dotenv
-from langgraph.checkpoint.postgres import PostgresSaver
-from psycopg_pool import ConnectionPool
+
 
 load_dotenv()
 
@@ -259,7 +258,9 @@ workflow.add_edge("remedial", "questions")
 connection_string = os.getenv("DATABASE_URL")
 if connection_string and "postgresql" in connection_string:
     try:
-        # LangGraph PostgresSaver uses psycopg pool
+        # LangGraph PostgresSaver uses psycopg pool (lazy import to avoid crash without postgres)
+        from langgraph.checkpoint.postgres import PostgresSaver
+        from psycopg_pool import ConnectionPool
         pool = ConnectionPool(conninfo=connection_string, max_size=20)
         checkpointer = PostgresSaver(pool)
         # Note: In a production app, you'd call checkpointer.setup() in a startup hook

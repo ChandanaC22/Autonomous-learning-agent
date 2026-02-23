@@ -24,8 +24,11 @@ The application is configured for a split deployment:
 
 ### 1. Start the Backend API
 ```bash
-pip install -r requirements.txt
-uvicorn server:app --reload --port 8000
+# Install dependencies from the backend folder
+pip install -r backend/requirements.txt
+
+# Start the server using the backend entry point
+uvicorn backend.server:app --reload --port 8000
 ```
 
 ### 2. Start the Frontend UI
@@ -36,9 +39,10 @@ npm run dev
 ```
 
 ## Project Structure
-- `backend/`: FastAPI application and API logic.
+- `backend/`: FastAPI application, logic, and dependencies.
+  - `backend/requirements.txt`: Python package list.
+  - `backend/server.py`: Server entry point.
 - `frontend/`: React application (Vite).
-- `server.py`: Root entry point for Render.
-- `vercel.json`: Configuration for Vercel deployment.
-- `render.yaml`: Configuration for Render deployment.
-- `agent.py`, `models.py`, `context_utils.py`: Core logic files.
+  - `frontend/vercel.json`: Handles client-side routing on Vercel.
+- `render.yaml`: Configuration for Render deployment (points to `backend/`).
+- `agent.py`, `models.py`, `context_utils.py`: Core logic files in root.

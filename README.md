@@ -1,46 +1,44 @@
-                                                                                # Autonomous Learning Agent
+                                                                                ## Deployment
 
-## Overview
-This application has been converted from a monolithic Streamlit app to a modern web architecture:
-- **Backend**: FastAPI (Python)
-- **Frontend**: React (Vite)
+The application is configured for a split deployment:
+- **Frontend**: Deployed on **Vercel** as a static site.
+- **Backend**: Deployed on **Render** as a Python web service.
 
-## Prerequisites
-- Python 3.8+
-- Node.js & npm
+### Deployment Steps
 
-## How to Run
+#### 1. Backend (Render)
+1. Join [Render.com](https://render.com) and create a new **Blueprint**.
+2. Connect this repository. Render will automatically use `render.yaml`.
+3. Set the following environment variables in Render:
+   - `GROQ_API_KEY`: Your Groq API key.
+   - `SECRET_KEY`: A secure random string for JWT.
+4. Once deployed, note your service URL (e.g., `https://your-app.onrender.com`).
 
-You need to run the backend and frontend in separate terminals.
+#### 2. Frontend (Vercel)
+1. Join [Vercel.com](https://vercel.com) and import this repository.
+2. In the project settings, add an environment variable:
+   - `VITE_API_URL`: Set this to your Render backend URL.
+3. Deploy the project.
+
+## How to Run Locally
 
 ### 1. Start the Backend API
-From the root directory of this folder:
-
 ```bash
-# If you haven't installed dependencies recently:
 pip install -r requirements.txt
-pip install fastapi uvicorn
-
-# Start the server
-uvicorn backend.main:app --reload --port 8000
+uvicorn server:app --reload --port 8000
 ```
-The API will be available at `http://localhost:8000`.
 
 ### 2. Start the Frontend UI
-Open a **new terminal** window, navigate to the `frontend` folder, and start the dev server:
-
 ```bash
 cd frontend
-
-# If first time running:
 npm install
-
-# Start the UI
 npm run dev
 ```
-The application will open in your browser, typically at `http://localhost:5173`.
 
 ## Project Structure
-- `backend/`: Contains the FastAPI application and API logic.
-- `frontend/`: Contains the React application.
-- `agent.py`, `models.py`, `*utils.py`: Core logic files shared/used by the backend.
+- `backend/`: FastAPI application and API logic.
+- `frontend/`: React application (Vite).
+- `server.py`: Root entry point for Render.
+- `vercel.json`: Configuration for Vercel deployment.
+- `render.yaml`: Configuration for Render deployment.
+- `agent.py`, `models.py`, `context_utils.py`: Core logic files.

@@ -1,0 +1,21 @@
+# Ignore everything except the frontend and Vercel config
+agent.py
+app.py
+main.py
+server.py
+backend/
+requirements.txt
+render.yaml
+.env
+api/
+models.py
+context_utils.py
+search_utils.py
+*.db
+*.py
+*.bat
+*.log
+evaluate_*.py
+verify_*.py
+test_*.py
+init_db.py

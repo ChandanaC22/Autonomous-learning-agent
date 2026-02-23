@@ -1,8 +1,0 @@
-{
-    "name": "autonomous-learning-agent-root",
-    "version": "1.0.0",
-    "scripts": {
-        "build": "cd frontend && npm install && npm run build",
-        "install": "cd frontend && npm install"
-    }
-}

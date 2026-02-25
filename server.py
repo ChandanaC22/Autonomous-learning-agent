@@ -1,0 +1,12 @@
+import sys
+import os
+
+# Ensure project root is on path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from backend.main import app
+
+# This root server.py is necessary for Render's FastAPI auto-detection.
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

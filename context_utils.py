@@ -9,8 +9,14 @@ from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from pydantic import BaseModel, Field
 from models import MCQ
 
-# Local embedding model
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+_embeddings = None
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings
 
 def chunk_text(text: str) -> List[str]:
     """Splits text into chunks for vectorization."""
@@ -25,7 +31,7 @@ def setup_vector_store(chunks: List[str]):
     """Creates a temporary in-memory vector store."""
     return Chroma.from_texts(
         texts=chunks,
-        embedding=embeddings,
+        embedding=get_embeddings(),
         collection_name="temp_context"
     )
 

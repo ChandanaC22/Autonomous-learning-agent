@@ -1,5 +1,5 @@
 @echo off
 echo Starting Backend API...
-pip install -r requirements.txt
-uvicorn server:app --reload --port 8000
+pip install -r backend/requirements.txt
+uvicorn backend.server:app --reload --port 8000
 pause

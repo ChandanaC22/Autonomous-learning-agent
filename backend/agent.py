@@ -261,16 +261,28 @@ if connection_string and "postgresql" in connection_string:
         # LangGraph PostgresSaver uses psycopg pool (lazy import to avoid crash without postgres)
         from langgraph.checkpoint.postgres import PostgresSaver
         from psycopg_pool import ConnectionPool
+        import socket
+        from urllib.parse import urlparse
+        
+        # Parse connection string to get host and port
+        parsed = urlparse(connection_string)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        
+        # Fast socket check (1s timeout)
+        with socket.create_connection((host, port), timeout=1):
+            pass
+            
         pool = ConnectionPool(conninfo=connection_string, max_size=20)
         checkpointer = PostgresSaver(pool)
         # Note: In a production app, you'd call checkpointer.setup() in a startup hook
         app = workflow.compile(checkpointer=checkpointer)
-        print("✅ LangGraph using PostgreSQL checkpointer.")
+        print("✅ LangGraph using PostgreSQL checkpointer.", flush=True)
     except Exception as e:
-        print(f"⚠️  Failed to connect to Postgres for LangGraph: {e}. Falling back to in-memory.")
+        print(f"⚠️  Failed to connect to Postgres for LangGraph: {e}. Falling back to in-memory.", flush=True)
         app = workflow.compile()
 else:
-    print("ℹ️  LangGraph using in-memory checkpointer (no Postgres detected).")
+    print("ℹ️  LangGraph using in-memory checkpointer (no Postgres detected).", flush=True)
     app = workflow.compile()
 
 if __name__ == "__main__":
@@ -303,7 +315,8 @@ if __name__ == "__main__":
     current_state = state
     print("--- Running Knowledge Engine ---", flush=True)
     
-    for output in app.stream(current_state):
+    config = {"configurable": {"thread_id": "cli_session"}}
+    for output in app.stream(current_state, config=config):
         for key, value in output.items():
             print(f"--- Node '{key}' completed ---", flush=True)
             current_state.update(value)

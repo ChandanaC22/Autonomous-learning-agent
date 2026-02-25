@@ -22,12 +22,28 @@ else:
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     
     try:
+        import socket
+        from urllib.parse import urlparse
+        
+        # Parse connection string to get host and port
+        # Handle the case where the schema might be postgres://
+        temp_url = DATABASE_URL
+        if temp_url.startswith("postgres://"):
+            temp_url = temp_url.replace("postgres://", "postgresql://", 1)
+        parsed = urlparse(temp_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        
+        # Fast socket check (1s timeout)
+        with socket.create_connection((host, port), timeout=1):
+            pass
+            
         engine = create_engine(DATABASE_URL)
         # Try to connect once to verify
         with engine.connect() as conn:
             pass
     except Exception as e:
-        print(f"⚠️  PostgreSQL connection failed: {e}. Falling back to SQLite.")
+        print(f"⚠️  PostgreSQL connection failed or port closed: {e}. Falling back to SQLite.")
         DATABASE_URL = "sqlite:///./autolearner.db"
         engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

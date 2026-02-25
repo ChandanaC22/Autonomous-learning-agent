@@ -7,30 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Add parent directory to sys.path to import agent and models
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure the current directory is in path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import existing logic
-# We need to make sure we can import these. 
-# Since we are running from the backend folder, or root, let's assume we run from root for simplicity in imports,
-# but for structure we put this in backend/main.py.
-# If we run `uvicorn backend.main:app`, the cwd is root.
-# So `import agent` works if we are in root.
-
-try:
-    from agent import app as agent_app, start_checkpoint, gather_context_node, validate_context_node, process_context_node, summarize_node, generate_questions_node, verify_understanding_node, remedial_node
-    from models import AgentState, Checkpoint, MCQ
-    from search_utils import search_for_simple_explanation
-    from context_utils import generate_feynman_explanation
-    from backend.database import init_db, get_db, MasterySession, Question, User
-    from sqlalchemy.orm import Session
-    from fastapi import Depends, Security
-    from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-    from backend.auth_utils import create_access_token, get_password_hash, verify_password, decode_access_token
-except ImportError as e:
-    print(f"❌ Error importing modules: {e}")
-    print(f"Current sys.path: {sys.path}")
-    # Fallback for development if paths are tricky
-    pass
+from .agent import app as agent_app, start_checkpoint, gather_context_node, validate_context_node, process_context_node, summarize_node, generate_questions_node, verify_understanding_node, remedial_node
+from .models import AgentState, Checkpoint, MCQ
+from .search_utils import search_for_simple_explanation
+from .context_utils import generate_feynman_explanation
+from .database import init_db, get_db, MasterySession, Question, User
+from sqlalchemy.orm import Session
+from fastapi import Depends, Security
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from .auth_utils import create_access_token, get_password_hash, verify_password, decode_access_token
 
 app = FastAPI(title="Autonomous Learning Agent API", version="1.0.0")
 
